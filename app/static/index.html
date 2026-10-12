@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chess Review</title>
+<style>
+:root{
+  --bg:#312e2b; --panel:#262421; --panel2:#2b2926; --line:#3d3a37;
+  --text:#e8e6e3; --muted:#9a9895; --green:#81b64c; --green-d:#6a9a3b;
+  --sq-light:#ebecd0; --sq-dark:#739552; --hl-light:#f5f682; --hl-dark:#b9ca43;
+  --genius:#26c2a3; --great:#749bbf; --good:#96bc4b; --medium:#f7c631; --bad:#ca3431;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);
+  font-family:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;font-size:15px}
+[hidden]{display:none!important}
+button,input,select,textarea{font:inherit;color:inherit}
+.nav{background:var(--panel);border-bottom:1px solid #1d1b19;padding:10px 20px;display:flex;align-items:center;gap:10px}
+.logo{font-size:22px;font-weight:800;letter-spacing:-.5px}
+.logo b{color:var(--green)}
+main{max-width:1180px;margin:0 auto;padding:20px 16px 60px}
+.card{background:var(--panel);border-radius:8px;padding:18px;box-shadow:0 2px 0 rgba(0,0,0,.25)}
+.card h2{margin:0 0 12px;font-size:17px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:800px){.grid2{grid-template-columns:1fr}}
+label.f{display:block;color:var(--muted);font-size:12px;margin:10px 0 4px;text-transform:uppercase;letter-spacing:.5px}
+input[type=text],select,textarea{width:100%;background:#1f1d1b;border:1px solid var(--line);border-radius:6px;padding:9px 10px}
+textarea{min-height:110px;resize:vertical;font-family:ui-monospace,Consolas,monospace;font-size:12.5px}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--green-d);border-color:transparent}
+.row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+.row>*{flex:1 1 120px}
+.btn{background:var(--green);color:#fff;border:0;border-bottom:4px solid var(--green-d);border-radius:8px;
+  padding:10px 18px;font-weight:700;cursor:pointer;font-size:15px}
+.btn:hover{filter:brightness(1.08)} .btn:active{transform:translateY(2px);border-bottom-width:2px}
+.btn:disabled{opacity:.55;cursor:wait}
+.btn.ghost{background:#3d3a37;border-bottom-color:#2c2a28}
+.btn.sm{padding:6px 12px;font-size:13px;border-bottom-width:3px}
+.err{background:#4a2321;border:1px solid var(--bad);color:#ffb4b2;border-radius:6px;padding:9px 12px;margin-top:12px}
+.warn{background:#4a3c17;border:1px solid var(--medium);color:#ffe28a;border-radius:6px;padding:9px 12px;margin-bottom:12px}
+.hint{color:var(--muted);font-size:12.5px;margin-top:8px}
+/* games list */
+#games{margin-top:16px;display:grid;gap:8px}
+.gcard{display:grid;grid-template-columns:6px 1fr auto;gap:12px;align-items:center;background:var(--panel);
+  border-radius:8px;padding:10px 14px 10px 0;overflow:hidden}
+.gcard .bar{align-self:stretch;background:var(--muted)}
+.gcard.win .bar{background:var(--green)} .gcard.loss .bar{background:var(--bad)}
+.gcard .t{font-weight:600}
+.gcard .s{color:var(--muted);font-size:12.5px;margin-top:2px}
+.dot{display:inline-block;width:11px;height:11px;border-radius:2px;border:1px solid #777;margin-right:6px;vertical-align:-1px}
+.dot.white{background:#fff}.dot.black{background:#111}
+.pill{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11.5px;font-weight:700;margin-left:8px;vertical-align:1px}
+.pill.win{background:var(--green-d)}.pill.loss{background:#8d2826}.pill.draw{background:#5b5855}
+/* review layout */
+.rv{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:18px;align-items:start}
+@media(max-width:980px){.rv{grid-template-columns:1fr}}
+.boardwrap{display:flex;gap:8px;align-items:stretch}
+.evalbar{width:26px;border-radius:4px;overflow:hidden;background:#403d39;position:relative;flex:none}
+.evalbar .fill{position:absolute;left:0;right:0;background:#fff;transition:height .25s}
+.evalbar .lbl{position:absolute;left:0;right:0;text-align:center;font-size:10.5px;font-weight:700}
+.bcol{flex:1;min-width:0}
+.pbar{display:flex;align-items:center;gap:8px;padding:5px 2px;font-weight:600}
+.pbar .rt{color:var(--muted);font-weight:400}
+.pbar .you{background:var(--green-d);border-radius:3px;font-size:10.5px;padding:1px 6px}
+#board{position:relative;display:grid;grid-template-columns:repeat(8,1fr);aspect-ratio:1/1;width:100%;
+  container-type:inline-size;border-radius:4px;overflow:hidden;user-select:none}
+.sq{position:relative;display:flex;align-items:center;justify-content:center}
+.sq.l{background:var(--sq-light)} .sq.d{background:var(--sq-dark)}
+.sq.l.hl{background:var(--hl-light)} .sq.d.hl{background:var(--hl-dark)}
+.sq .co{position:absolute;font-size:2.1cqw;font-weight:700;line-height:1}
+.sq.l .co{color:var(--sq-dark)} .sq.d .co{color:var(--sq-light)}
+.sq .co.r{top:3%;left:4%} .sq .co.fl{bottom:3%;right:5%}
+.piece{font-size:10.4cqw;line-height:1;z-index:1;font-family:"Segoe UI Symbol","Noto Sans Symbols 2","DejaVu Sans",sans-serif}
+.piece.w{color:#fff;-webkit-text-stroke:.35cqw #3a3a3a;paint-order:stroke fill}
+.piece.b{color:#1f1f1f;-webkit-text-stroke:.2cqw #bdbdbd;paint-order:stroke fill}
+.badge{position:absolute;top:-6%;right:-6%;width:44%;height:44%;border-radius:50%;z-index:3;display:flex;
+  align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:3.4cqw;border:.25cqw solid rgba(0,0,0,.25)}
+#arrows{position:absolute;inset:0;width:100%;height:100%;z-index:4;pointer-events:none}
+.ctrls{display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap}
+.ctrls .btn{min-width:54px}
+.panel{background:var(--panel);border-radius:8px;padding:14px;margin-bottom:14px}
+.players{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pc{background:var(--panel2);border-radius:8px;padding:10px 12px}
+.pc .nm{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pc .acc{font-size:30px;font-weight:800;line-height:1.1;margin-top:4px}
+.pc .sub{color:var(--muted);font-size:12px}
+table.cnt{width:100%;border-collapse:collapse;margin-top:10px;font-size:13.5px}
+table.cnt td{padding:3px 4px;border-top:1px solid var(--line)}
+table.cnt td:nth-child(n+2){text-align:center;width:70px}
+.lb{display:inline-flex;align-items:center;gap:7px}
+.lb i{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;
+  font-style:normal;font-size:10.5px;font-weight:800;color:#fff;background:var(--c)}
+#detail .head{display:flex;align-items:center;gap:12px}
+#detail .big{width:42px;height:42px;border-radius:50%;background:var(--c);display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:17px;color:#fff;flex:none}
+#detail .ttl{font-size:18px;font-weight:700}
+#detail .sb{color:var(--muted);font-size:13px}
+#detail p{margin:10px 0;line-height:1.45}
+#detail .ev{font-family:ui-monospace,Consolas,monospace;color:var(--muted);font-size:13px}
+#movelist{max-height:250px;overflow:auto;display:grid;grid-template-columns:38px 1fr 1fr;gap:3px 6px;align-items:center}
+#movelist .n{color:var(--muted);text-align:right;font-size:13px}
+.chip{display:flex;align-items:center;gap:6px;background:transparent;border:0;border-radius:4px;padding:3px 6px;
+  text-align:left;cursor:pointer;font-weight:600;min-height:26px}
+.chip:hover{background:#3a3835} .chip.sel{background:#4b4845}
+.chip i{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;border-radius:50%;
+  font-style:normal;font-size:9px;font-weight:800;color:#fff;background:var(--c);flex:none}
+#graph{width:100%;height:96px;display:block;cursor:pointer;border-radius:4px}
+.spin{width:44px;height:44px;border:5px solid #3d3a37;border-top-color:var(--green);border-radius:50%;
+  animation:sp 1s linear infinite;margin:0 auto 14px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.pbarwrap{height:10px;background:#3d3a37;border-radius:6px;overflow:hidden;margin-top:10px}
+.pbarwrap div{height:100%;background:var(--green);width:0;transition:width .3s}
+</style>
+</head>
+<body>
+<header class="nav"><div class="logo">&#9822; <b>Chess</b>Review</div></header>
+<main>
+
+<!-- ============ HOME ============ -->
+<section id="home">
+  <div class="grid2">
+    <div class="card">
+      <h2>Fetch your chess.com games</h2>
+      <label class="f" for="username">chess.com username</label>
+      <input id="username" type="text" placeholder="e.g. blackmoonbear25" autocomplete="off" spellcheck="false">
+      <div class="row">
+        <div><label class="f" for="limit">Games</label>
+          <select id="limit"><option>10</option><option>20</option><option>30</option></select></div>
+        <div><button id="fetch-btn" class="btn" style="width:100%">Fetch games</button></div>
+      </div>
+      <div id="fetch-err" class="err" hidden></div>
+    </div>
+    <div class="card">
+      <h2>Upload or paste a PGN</h2>
+      <input id="pgn-file" type="file" accept=".pgn,.txt,text/plain">
+      <label class="f" for="pgn-text">PGN</label>
+      <textarea id="pgn-text" placeholder="[Event &quot;...&quot;]&#10;&#10;1. e4 e5 2. Nf3 ..."></textarea>
+      <div class="row">
+        <div><label class="f" for="pgn-color">I played as</label>
+          <select id="pgn-color"><option value="">Not specified</option><option value="white">White</option><option value="black">Black</option></select></div>
+        <div><button id="pgn-btn" class="btn" style="width:100%">Analyze PGN</button></div>
+      </div>
+      <div id="pgn-err" class="err" hidden></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px;padding:12px 18px">
+    <div class="row" style="align-items:center">
+      <div style="flex:0 1 auto"><b>Analysis depth</b></div>
+      <div style="flex:0 1 260px"><select id="depth">
+        <option value="10">Fast (depth 10)</option><option value="12" selected>Standard (depth 12)</option>
+        <option value="16">Deep (depth 16, slower)</option></select></div>
+      <div class="hint" style="flex:3 1 260px;margin:0">Powered by Stockfish. Deeper analysis is more accurate but takes longer.</div>
+    </div>
+  </div>
+  <div id="games"></div>
+</section>
+
+<!-- ============ REVIEW ============ -->
+<section id="review" hidden>
+  <div style="margin-bottom:12px"><button id="back" class="btn ghost sm">&larr; New review</button></div>
+
+  <div id="progress" class="card" style="text-align:center;padding:40px 20px" hidden>
+    <div class="spin"></div>
+    <div id="prog-text" style="font-weight:700;font-size:17px">Starting analysis...</div>
+    <div class="hint">Stockfish is evaluating every move. This can take up to a minute.</div>
+    <div class="pbarwrap" style="max-width:420px;margin:14px auto 0"><div id="prog-bar"></div></div>
+  </div>
+  <div id="rv-err" class="err" hidden></div>
+
+  <div id="result" class="rv" hidden>
+    <div>
+      <div id="trunc" class="warn" hidden></div>
+      <div class="boardwrap">
+        <div class="evalbar" id="evalbar"><div class="fill" id="evalfill"></div><div class="lbl" id="evallbl"></div></div>
+        <div class="bcol">
+          <div class="pbar" id="ptop"></div>
+          <div id="board"><svg id="arrows" viewBox="0 0 80 80"></svg></div>
+          <div class="pbar" id="pbot"></div>
+        </div>
+      </div>
+      <div class="ctrls">
+        <button class="btn ghost sm" id="b-first" title="First (Home)">&#9198;</button>
+        <button class="btn ghost sm" id="b-prev" title="Previous (&larr;)">&#9664;</button>
+        <button class="btn ghost sm" id="b-next" title="Next (&rarr;)">&#9654;</button>
+        <button class="btn ghost sm" id="b-last" title="Last (End)">&#9197;</button>
+        <button class="btn ghost sm" id="b-flip" title="Flip board">&#8645; Flip</button>
+      </div>
+    </div>
+    <div>
+      <div class="panel">
+        <div class="players" id="players"></div>
+        <table class="cnt" id="counts"></table>
+      </div>
+      <div class="panel" id="detail"></div>
+      <div class="panel"><div id="movelist"></div></div>
+      <div class="panel" style="padding:10px"><svg id="graph" viewBox="0 0 400 96" preserveAspectRatio="none"></svg></div>
+    </div>
+  </div>
+</section>
+</main>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const LABELS = ["Genius","Great","Good","Medium","Bad"];
+const LCOL = {Genius:"#26c2a3",Great:"#749bbf",Good:"#96bc4b",Medium:"#f7c631",Bad:"#ca3431"};
+const GLYPH = {k:"\u265A",q:"\u265B",r:"\u265C",b:"\u265D",n:"\u265E",p:"\u265F"};
+const VS = "\uFE0E";                                  // force text (non-emoji) presentation
+
+function sym(m){
+  switch(m.label){
+    case "Genius": return "!!"; case "Great": return "!";
+    case "Good": return m.is_best ? "\u2605" : "\u2713";
+    case "Medium": return "?!";
+    default: return m.sub_label === "Blunder" ? "??" : "?";
+  }
+}
+const winPct = p => 50 + 50 * (2 / (1 + Math.exp(-0.368 * p)) - 1);
+
+/* ---------------- API helpers ---------------- */
+async function api(url, opts){
+  const r = await fetch(url, opts);
+  let body = null; try { body = await r.json(); } catch (_) {}
+  if (!r.ok) throw new Error((body && body.detail && (typeof body.detail === "string" ? body.detail : "Invalid request")) || ("Server error (" + r.status + ")"));
+  return body;
+}
+function showErr(id, msg){ const e = $(id); e.textContent = msg; e.hidden = !msg; }
+
+/* ---------------- HOME: chess.com games ---------------- */
+let GAMES = [];
+async function fetchGames(){
+  const u = $("#username").value.trim();
+  showErr("#fetch-err", "");
+  if (!u){ showErr("#fetch-err", "Enter your chess.com username."); return; }
+  const btn = $("#fetch-btn"); btn.disabled = true; btn.textContent = "Fetching...";
+  try {
+    const d = await api("/api/chess-com/games?username=" + encodeURIComponent(u) + "&limit=" + $("#limit").value);
+    GAMES = d.games; renderGames(d.username);
+  } catch (e) { GAMES = []; $("#games").innerHTML = ""; showErr("#fetch-err", e.message); }
+  finally { btn.disabled = false; btn.textContent = "Fetch games"; }
+}
+function openingName(url){
+  if (!url) return "";
+  let n = decodeURIComponent(url.replace(/\/+$/, "").split("/").pop());
+  return n.split(/-\d+\./)[0].replace(/-/g, " ");
+}
+function renderGames(user){
+  const box = $("#games");
+  if (!GAMES.length){ box.innerHTML = '<div class="card hint">No standard games found for <b>' + esc(user) + "</b> in the last few months.</div>"; return; }
+  box.innerHTML = GAMES.map((g, i) => {
+    const me = g.user_color, opp = me === "white" ? g.black : g.white;
+    const oppR = me === "white" ? g.black_rating : g.white_rating, myR = me === "white" ? g.white_rating : g.black_rating;
+    const date = new Date(g.end_time * 1000).toLocaleDateString(undefined, {month:"short", day:"numeric", year:"numeric"});
+    const word = {win:"Won", loss:"Lost", draw:"Draw"}[g.user_outcome];
+    return '<div class="gcard ' + esc(g.user_outcome) + '"><div class="bar"></div><div>' +
+      '<div class="t"><span class="dot ' + esc(me) + '"></span>vs ' + esc(opp) + ' (' + esc(oppR ?? "?") + ')' +
+      '<span class="pill ' + esc(g.user_outcome) + '">' + word + '</span></div>' +
+      '<div class="s">' + esc(g.time_class) + ' &middot; you ' + esc(myR ?? "?") + ' &middot; ' + esc(date) +
+      (g.opening ? " &middot; " + esc(g.opening) : "") + '</div></div>' +
+      '<button class="btn sm review-btn" data-i="' + i + '">Review</button></div>';
+  }).join("");
+}
+
+/* ---------------- HOME: upload / paste ---------------- */
+$("#pgn-file").addEventListener("change", e => {
+  const f = e.target.files[0]; if (!f) return;
+  if (f.size > 250000){ showErr("#pgn-err", "File too large (limit about 200 KB)."); return; }
+  const rd = new FileReader();
+  rd.onload = () => { $("#pgn-text").value = rd.result; showErr("#pgn-err", ""); };
+  rd.readAsText(f);
+});
+
+/* ---------------- analysis flow ---------------- */
+let RUN = 0;                                           // cancels stale polling loops
+async function startAnalysis(pgn, userColor, errTarget){
+  const run = ++RUN;
+  $("#home").hidden = true; $("#review").hidden = false;
+  $("#result").hidden = true; showErr("#rv-err", ""); $("#progress").hidden = false;
+  setProgress(0, 0, "Starting analysis...");
+  const fail = msg => { $("#progress").hidden = true; goHome(); showErr(errTarget, msg); };
+  let job;
+  try {
+    job = await api("/api/analyze", {method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({pgn, user_color: userColor || null, depth: +$("#depth").value})});
+  } catch (e) { if (run === RUN) fail(e.message); return; }
+  while (run === RUN){
+    if (job.status === "done"){ $("#progress").hidden = true; renderResult(job.result, userColor); return; }
+    if (job.status === "error"){ $("#progress").hidden = true; showErr("#rv-err", job.error || "Analysis failed."); return; }
+    setProgress(job.progress.done, job.progress.total, job.status === "queued" ? "Waiting in queue..." : null);
+    await new Promise(r => setTimeout(r, 600));
+    if (run !== RUN) return;
+    try { job = await api("/api/jobs/" + job.id); }
+    catch (e) { $("#progress").hidden = true; showErr("#rv-err", e.message); return; }
+  }
+}
+function setProgress(done, total, text){
+  $("#prog-text").textContent = text || ("Analyzing move " + done + " of " + total + "...");
+  $("#prog-bar").style.width = (total ? Math.round(100 * done / total) : 4) + "%";
+}
+function goHome(){ RUN++; $("#review").hidden = true; $("#home").hidden = false; }
+
+/* ---------------- review state + rendering ---------------- */
+const S = {res:null, k:0, flipped:false, showBest:false};
+
+function renderResult(res, userColor){
+  S.res = res; S.k = 0; S.showBest = false;
+  S.flipped = (res.user_color || userColor) === "black";
+  $("#result").hidden = false;
+  const t = $("#trunc");
+  t.hidden = !res.truncated;
+  if (res.truncated) t.textContent = "Analysis stopped early (time limit): " + res.analyzed_plies + " of " + res.total_plies + " moves were reviewed.";
+  if (!res.moves.length){ showErr("#rv-err", "No moves could be analyzed within the time limit."); $("#result").hidden = true; return; }
+  renderSummary(); renderMoveList(); renderGraph(); update();
+}
+function parseFen(fen){
+  return fen.split(" ")[0].split("/").map(r => {
+    const out = [];
+    for (const ch of r) { if (/\d/.test(ch)) for (let i = 0; i < +ch; i++) out.push(null); else out.push(ch); }
+    return out;
+  });
+}
+function currentFen(){
+  const {res, k, showBest} = S;
+  if (k === 0) return res.moves[0].fen_before;
+  return showBest ? res.moves[k-1].fen_before : res.moves[k-1].fen_after;
+}
+function sqXY(uci2){                                   // "e4" -> board grid x,y (0-7) honoring orientation
+  const f = uci2.charCodeAt(0) - 97, r = +uci2[1] - 1;
+  return S.flipped ? [7 - f, r] : [f, 7 - r];
+}
+function renderBoard(){
+  const rows = parseFen(currentFen()), m = S.k ? S.res.moves[S.k-1] : null;
+  const hl = new Set();
+  if (m && !S.showBest){ hl.add(m.uci.slice(0,2)); hl.add(m.uci.slice(2,4)); }
+  let html = "";
+  for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++){
+    const file = S.flipped ? 7 - j : j, rank = S.flipped ? i : 7 - i;
+    const name = String.fromCharCode(97 + file) + (rank + 1);
+    const dark = (file + rank) % 2 === 0;
+    const p = rows[7 - rank][file];
+    let inner = "";
+    if (j === 0) inner += '<span class="co r">' + (rank + 1) + "</span>";
+    if (i === 7) inner += '<span class="co fl">' + String.fromCharCode(97 + file) + "</span>";
+    if (p){
+      const white = p === p.toUpperCase();
+      inner += '<span class="piece ' + (white ? "w" : "b") + '">' + GLYPH[p.toLowerCase()] + VS + "</span>";
+    }
+    if (m && !S.showBest && name === m.uci.slice(2,4))
+      inner += '<span class="badge" style="background:' + LCOL[m.label] + '">' + esc(sym(m)) + "</span>";
+    html += '<div class="sq ' + (dark ? "d" : "l") + (hl.has(name) ? " hl" : "") + '" data-sq="' + name + '">' + inner + "</div>";
+  }
+  const board = $("#board"), svg = $("#arrows");
+  board.querySelectorAll(".sq").forEach(n => n.remove());
+  board.insertAdjacentHTML("afterbegin", html);
+  svg.innerHTML = "";
+  if (m && S.showBest){
+    if (!m.is_best) svg.innerHTML += arrow(m.uci, "rgba(202,52,49,.8)");
+    svg.innerHTML += arrow(m.best_uci, "rgba(129,182,76,.9)");
+  }
+}
+function arrow(uci, color){
+  const [x1, y1] = sqXY(uci.slice(0,2)), [x2, y2] = sqXY(uci.slice(2,4));
+  const ax = x1*10 + 5, ay = y1*10 + 5, bx = x2*10 + 5, by = y2*10 + 5;
+  const dx = bx - ax, dy = by - ay, len = Math.hypot(dx, dy) || 1, ux = dx/len, uy = dy/len;
+  const head = 4.2, w = 1.7, tipx = bx - ux*0.5, tipy = by - uy*0.5;
+  const bx2 = tipx - ux*head, by2 = tipy - uy*head;
+  return '<line x1="' + ax + '" y1="' + ay + '" x2="' + bx2 + '" y2="' + by2 + '" stroke="' + color + '" stroke-width="' + w + '" stroke-linecap="round"/>' +
+    '<polygon fill="' + color + '" points="' + tipx + "," + tipy + " " + (bx2 - uy*head*0.6) + "," + (by2 + ux*head*0.6) + " " + (bx2 + uy*head*0.6) + "," + (by2 - ux*head*0.6) + '"/>';
+}
+function renderPlayers(){
+  const h = S.res.headers, mk = (side) => {
+    const name = h[side === "white" ? "White" : "Black"] || "?", elo = h[side === "white" ? "WhiteElo" : "BlackElo"];
+    return '<span class="dot ' + side + '"></span>' + esc(name) + (elo ? ' <span class="rt">(' + esc(elo) + ")</span>" : "") +
+      (S.res.user_color === side ? ' <span class="you">You</span>' : "");
+  };
+  $("#ptop").innerHTML = mk(S.flipped ? "white" : "black");
+  $("#pbot").innerHTML = mk(S.flipped ? "black" : "white");
+}
+function renderEval(){
+  const {res, k} = S;
+  const pawns = res.eval_series[k] ?? 0;
+  const txt = k === 0 ? res.moves[0].eval_before : res.moves[k-1].eval_after;
+  const wp = winPct(pawns);
+  const fill = $("#evalfill"), lbl = $("#evallbl");
+  fill.style.height = wp + "%";
+  fill.style.top = S.flipped ? "0" : "auto"; fill.style.bottom = S.flipped ? "auto" : "0";
+  const atWhiteEnd = pawns >= 0, whiteAtBottom = !S.flipped;
+  const atBottom = atWhiteEnd === whiteAtBottom;
+  lbl.style.top = atBottom ? "auto" : "3px"; lbl.style.bottom = atBottom ? "3px" : "auto";
+  lbl.style.color = atWhiteEnd ? "#333" : "#fff";
+  lbl.textContent = String(txt).replace("-M", "M").replace(/^\+/, "");
+}
+function renderDetail(){
+  const {res, k} = S, box = $("#detail");
+  if (k === 0){
+    const op = openingName(res.headers.ECOUrl || "");
+    box.innerHTML = '<div class="ttl">Game review</div><p>' + esc(res.headers.Result || "") +
+      (res.headers.Termination ? " &middot; " + esc(res.headers.Termination) : "") + (op ? "<br>" + esc(op) : "") +
+      '</p><p class="hint">Click a move, use the arrow keys, or click the graph to step through the game.</p>';
+    return;
+  }
+  const m = res.moves[k-1], c = LCOL[m.label];
+  const num = m.move_number + (m.color === "white" ? "." : "...");
+  const bestLine = m.best_pv.slice(0, 5).join(" ");
+  box.innerHTML = '<div class="head" style="--c:' + c + '"><div class="big">' + esc(sym(m)) + '</div><div>' +
+    '<div class="ttl">' + esc(num + m.san) + " is " + (m.label === "Medium" ? "okay" : m.label === "Bad" ? "bad" : "a " + m.label.toLowerCase() + " move") + '</div>' +
+    '<div class="sb" style="color:' + c + '">' + esc(m.label) + " &middot; " + esc(m.sub_label) + "</div></div></div>" +
+    '<p id="detail-expl">' + esc(m.explanation) + "</p>" +
+    '<div class="ev">Eval ' + esc(m.eval_before) + " &rarr; " + esc(m.eval_after) + "</div>" +
+    (m.is_best ? "" : '<div class="ev" style="margin-top:4px">Best: <b style="color:var(--green)">' + esc(m.best_san) + "</b> &nbsp;" + esc(bestLine) + "</div>") +
+    '<div style="margin-top:10px"><button class="btn sm ghost" id="b-showbest">' + (S.showBest ? "Back to position" : (m.is_best ? "Show best-move arrow" : "Show best move on board")) + "</button></div>";
+  $("#b-showbest").onclick = () => { S.showBest = !S.showBest; update(); };
+}
+function renderSummary(){
+  const sm = S.res.summary, h = S.res.headers;
+  const card = side => {
+    const s = sm[side], nm = h[side === "white" ? "White" : "Black"] || side;
+    return '<div class="pc"><div class="nm"><span class="dot ' + side + '"></span>' + esc(nm) + '</div>' +
+      '<div class="acc">' + (s.accuracy == null ? "&ndash;" : s.accuracy.toFixed(1)) + '</div><div class="sub">Accuracy &middot; ' + s.moves + " moves</div></div>";
+  };
+  $("#players").innerHTML = card("white") + card("black");
+  $("#counts").innerHTML = LABELS.map(l =>
+    '<tr><td><span class="lb" style="--c:' + LCOL[l] + '"><i>' + {Genius:"!!",Great:"!",Good:"\u2713",Medium:"?!",Bad:"?"}[l] + "</i>" + l + "</span></td>" +
+    "<td>" + sm.white.counts[l] + "</td><td>" + sm.black.counts[l] + "</td></tr>").join("");
+}
+function renderMoveList(){
+  const rows = []; let cur = null;
+  S.res.moves.forEach((m, i) => {
+    if (m.color === "white" || !cur){ cur = {n: m.move_number, w: null, b: null}; rows.push(cur); }
+    cur[m.color === "white" ? "w" : "b"] = i + 1;
+  });
+  const chip = ply => {
+    if (!ply) return "<span></span>";
+    const m = S.res.moves[ply-1];
+    return '<button class="chip" data-k="' + ply + '" style="--c:' + LCOL[m.label] + '"><i>' + esc(sym(m)) + "</i>" + esc(m.san) + "</button>";
+  };
+  $("#movelist").innerHTML = rows.map(r => '<span class="n">' + r.n + ".</span>" + chip(r.w) + chip(r.b)).join("");
+}
+function renderGraph(){
+  const s = S.res.eval_series, W = 400, H = 96, n = Math.max(1, s.length - 1);
+  const X = i => (i / n) * W, Y = v => H / 2 - (Math.max(-10, Math.min(10, v)) / 10) * (H / 2 - 2);
+  const pts = s.map((v, i) => X(i).toFixed(1) + "," + Y(v).toFixed(1)).join(" ");
+  let dots = "";
+  S.res.moves.forEach((m, i) => {
+    if (m.label === "Genius" || m.label === "Great" || m.label === "Bad")
+      dots += '<circle cx="' + X(i + 1).toFixed(1) + '" cy="' + Y(s[i + 1]).toFixed(1) + '" r="2.6" fill="' + LCOL[m.label] + '"/>';
+  });
+  $("#graph").innerHTML = '<rect width="' + W + '" height="' + H + '" fill="#403d39"/>' +
+    '<polygon points="0,' + H + " " + pts + " " + W + "," + H + '" fill="#f2f2f2"/>' +
+    '<line x1="0" x2="' + W + '" y1="' + H/2 + '" y2="' + H/2 + '" stroke="#888" stroke-width=".6" stroke-dasharray="3 3"/>' +
+    dots + '<line id="gmark" y1="0" y2="' + H + '" stroke="#81b64c" stroke-width="1.5"/>';
+}
+function update(){
+  renderPlayers(); renderBoard(); renderEval(); renderDetail();
+  const n = S.res.eval_series.length - 1;
+  const gm = $("#gmark"); if (gm){ const x = (S.k / Math.max(1, n)) * 400; gm.setAttribute("x1", x); gm.setAttribute("x2", x); }
+  document.querySelectorAll("#movelist .chip").forEach(c => c.classList.toggle("sel", +c.dataset.k === S.k));
+  const sel = document.querySelector("#movelist .chip.sel");
+  if (sel){ const box = $("#movelist"), top = sel.offsetTop - box.offsetTop;
+    if (top < box.scrollTop || top > box.scrollTop + box.clientHeight - 30) box.scrollTop = top - 60; }
+}
+function go(k){ if (!S.res || !Number.isFinite(k)) return; S.k = Math.max(0, Math.min(S.res.moves.length, Math.round(k))); S.showBest = false; update(); }
+
+/* ---------------- events ---------------- */
+$("#fetch-btn").addEventListener("click", fetchGames);
+$("#username").addEventListener("keydown", e => { if (e.key === "Enter") fetchGames(); });
+$("#games").addEventListener("click", e => {
+  const b = e.target.closest(".review-btn"); if (!b) return;
+  const g = GAMES[+b.dataset.i]; startAnalysis(g.pgn, g.user_color, "#fetch-err");
+});
+$("#pgn-btn").addEventListener("click", () => {
+  const t = $("#pgn-text").value.trim(); showErr("#pgn-err", "");
+  if (!t){ showErr("#pgn-err", "Paste a PGN or choose a file first."); return; }
+  startAnalysis(t, $("#pgn-color").value, "#pgn-err");
+});
+$("#back").addEventListener("click", goHome);
+$("#b-first").onclick = () => go(0);
+$("#b-prev").onclick = () => go(S.k - 1);
+$("#b-next").onclick = () => go(S.k + 1);
+$("#b-last").onclick = () => S.res && go(S.res.moves.length);
+$("#b-flip").onclick = () => { S.flipped = !S.flipped; if (S.res) update(); };
+$("#movelist").addEventListener("click", e => { const c = e.target.closest(".chip"); if (c) go(+c.dataset.k); });
+$("#graph").addEventListener("click", e => {
+  if (!S.res) return;
+  const r = e.currentTarget.getBoundingClientRect(), n = S.res.eval_series.length - 1;
+  if (!(r.width > 0)) return;
+  go(((e.clientX - r.left) / r.width) * n);
+});
+document.addEventListener("keydown", e => {
+  if (!S.res || $("#review").hidden || /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
+  if (e.key === "ArrowLeft"){ go(S.k - 1); e.preventDefault(); }
+  else if (e.key === "ArrowRight"){ go(S.k + 1); e.preventDefault(); }
+  else if (e.key === "Home"){ go(0); e.preventDefault(); }
+  else if (e.key === "End"){ go(S.res.moves.length); e.preventDefault(); }
+});
+</script>
+</body>
+</html>

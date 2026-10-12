@@ -1,0 +1,5 @@
+# FastAPI version (Docker / Render): app/main.py
+fastapi>=0.110
+uvicorn>=0.29
+python-chess>=1.10
+requests>=2.31

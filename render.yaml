@@ -1,0 +1,17 @@
+# Render Blueprint: New + > Blueprint > pick this repo. Builds the Dockerfile.
+services:
+  - type: web
+    name: chess-review
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: DEFAULT_DEPTH      # analysis depth when the UI doesn't specify one
+        value: "12"
+      - key: MAX_DEPTH          # hard cap so nobody can request a 30-minute analysis
+        value: "16"
+      - key: MAX_SECONDS        # per-game time budget (partial result if exceeded)
+        value: "240"
+      - key: MAX_QUEUE          # jobs waiting + running before the server answers 429
+        value: "8"

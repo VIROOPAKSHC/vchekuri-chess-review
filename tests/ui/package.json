@@ -1,0 +1,2 @@
+{ "name": "chessreview-ui-smoke", "private": true, "scripts": { "test": "node ui_smoke.js" },
+  "devDependencies": { "jsdom": "^24.0.0" } }
